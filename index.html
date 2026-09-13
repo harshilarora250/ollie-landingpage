@@ -1,10 +1,367 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollie - Waitlist</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e8e7e2">
+  <meta name="description" content="Ollie turns the thoughts in your head into a plan that makes room for what matters.">
+  <title>Ollie — Make room for what matters</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --ink: #1d1d1c;
+      --muted: #777873;
+      --paper: #e8e7e2;
+      --warm: #f5f4ef;
+      --line: rgba(29, 29, 28, .12);
+      --glass: rgba(255, 255, 255, .40);
+      --glass-strong: rgba(255, 255, 255, .66);
+      --shadow: 0 24px 70px rgba(70, 70, 62, .12), inset 0 1px rgba(255,255,255,.78);
+      --sans: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+      --mono: 'DM Mono', 'SFMono-Regular', Consolas, monospace;
+      --radius-xl: 42px;
+      --radius-lg: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    body.is-loading { overflow: hidden; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: #dfe0dd;
+      transition: opacity .9s cubic-bezier(.65,0,.35,1), visibility .9s;
+    }
+    .loader.is-done { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader__blob { position: absolute; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.16); filter: blur(1px); box-shadow: inset 0 1px rgba(255,255,255,.7), 0 25px 65px rgba(87, 91, 88, .1); }
+    .loader__blob--one { width: 38vw; height: 22vw; left: -8vw; top: -7vw; border-radius: 55% 45% 40% 60%; animation: drift 13s ease-in-out infinite; }
+    .loader__blob--two { width: 34vw; height: 34vw; right: -8vw; bottom: -12vw; border-radius: 44% 56% 48% 52%; animation: drift 17s -4s ease-in-out infinite reverse; }
+    .loader__blob--three { width: 18vw; height: 10vw; right: 8vw; top: 8vw; border-radius: 52% 48% 60% 40%; animation: drift 11s -2s ease-in-out infinite; }
+    .loader__orb { position: relative; width: min(360px, 65vw); aspect-ratio: 1; display: grid; place-content: center; text-align: center; border: 1px solid rgba(255,255,255,.8); border-radius: 50%; background: radial-gradient(circle at 34% 23%, rgba(255,255,255,.92), rgba(255,255,255,.25) 35%, rgba(255,255,255,.16) 70%); box-shadow: inset 0 2px 9px rgba(255,255,255,.75), 0 30px 80px rgba(81, 84, 82, .15); animation: breathe 5s ease-in-out infinite; }
+    .loader__orb::after { content: ''; position: absolute; inset: 13%; border-radius: 50%; border: 1px solid rgba(255,255,255,.33); }
+    .loader__name { margin: 0 0 16px; font-size: clamp(3rem, 6.7vw, 5rem); font-weight: 500; letter-spacing: -.09em; line-height: .8; }
+    .loader__tagline, .eyebrow { margin: 0; font: 500 10px/1.4 var(--mono); letter-spacing: .21em; text-transform: uppercase; color: #6e716e; }
+    .loader__progress { width: 148px; height: 2px; margin: 32px auto 13px; overflow: hidden; background: rgba(29,29,28,.12); border-radius: 8px; }
+    .loader__progress::before { content: ''; display: block; width: 40%; height: 100%; background: var(--ink); animation: load 1.35s ease-in-out infinite; }
+    .loader__small { margin: 0; color: #888a86; font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+
+    .page { position: relative; isolation: isolate; overflow: hidden; }
+    .container { width: min(1180px, calc(100% - 64px)); margin: 0 auto; }
+    .soft-orb { position: absolute; z-index: -1; pointer-events: none; border: 1px solid rgba(255,255,255,.64); background: rgba(255,255,255,.23); box-shadow: inset 0 1px rgba(255,255,255,.9), 0 30px 80px rgba(85,85,76,.08); filter: blur(.1px); }
+    .soft-orb--a { width: 380px; height: 230px; top: 13%; left: -210px; border-radius: 48% 52% 61% 39%; transform: rotate(27deg); }
+    .soft-orb--b { width: 270px; height: 380px; top: 10%; right: -150px; border-radius: 52% 48% 41% 59%; transform: rotate(-35deg); }
+    .soft-orb--c { width: 250px; height: 180px; top: 53%; left: -130px; border-radius: 60% 40% 45% 55%; transform: rotate(-18deg); }
+    .soft-orb--d { width: 380px; height: 200px; top: 62%; right: -190px; border-radius: 43% 57% 54% 46%; transform: rotate(18deg); }
+
+    .glass-nav { position: fixed; z-index: 10; top: 20px; left: 50%; display: flex; align-items: center; gap: 32px; width: min(1060px, calc(100% - 40px)); min-height: 64px; padding: 8px 10px 8px 25px; border: 1px solid rgba(255,255,255,.74); border-radius: 999px; background: rgba(247,247,243,.56); box-shadow: 0 14px 40px rgba(73,74,68,.09), inset 0 1px rgba(255,255,255,.93); backdrop-filter: blur(22px); transform: translateX(-50%); transition: background .3s, box-shadow .3s; }
+    .glass-nav.scrolled { background: rgba(247,247,243,.82); box-shadow: 0 18px 46px rgba(73,74,68,.13), inset 0 1px rgba(255,255,255,.93); }
+    .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 22px; font-weight: 600; letter-spacing: -.08em; }
+    .brand__mark { width: 25px; height: 25px; border: 1.5px solid currentColor; border-radius: 50%; position: relative; }
+    .brand__mark::before { content: ''; position: absolute; width: 7px; height: 7px; left: 5px; top: 6px; border-radius: 50%; background: currentColor; box-shadow: 8px 4px 0 -1px var(--paper); }
+    .nav-links { display: flex; gap: 27px; margin: 0 auto; font-size: 13px; color: #595a55; }
+    .nav-links a, .footer-links a { transition: color .25s; }
+    .nav-links a:hover, .footer-links a:hover { color: var(--ink); }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 0 21px; border: 1px solid rgba(29,29,28,.9); border-radius: 999px; color: #f7f7f3; background: var(--ink); font-size: 13px; transition: transform .25s, box-shadow .25s, background .25s; }
+    .button:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(29,29,28,.14); }
+    .button:active { transform: translateY(0) scale(.98); }
+    .button--light { color: var(--ink); background: rgba(255,255,255,.42); border-color: rgba(29,29,28,.15); }
+    .arrow { font-size: 16px; line-height: 0; transition: transform .25s; }
+    .button:hover .arrow { transform: translateX(4px); }
+
+    .hero { position: relative; min-height: 920px; padding: 175px 0 115px; display: flex; align-items: center; }
+    .hero::before { content: ''; position: absolute; inset: 0; z-index: -2; background: radial-gradient(ellipse at 58% 43%, rgba(255,255,255,.58), transparent 48%), linear-gradient(115deg, #e9e8e3, #e3e4e0 55%, #edede8); }
+    .hero__wash { position: absolute; z-index: -1; width: 700px; height: 700px; top: 130px; left: 46%; border-radius: 50%; background: rgba(255,255,255,.25); filter: blur(30px); }
+    .hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(410px, .92fr); gap: 76px; align-items: center; }
+    .hero__copy { padding-left: clamp(0px, 4vw, 52px); }
+    .hero h1 { max-width: 620px; margin: 25px 0 24px; font-size: clamp(4.1rem, 7vw, 7.3rem); font-weight: 500; letter-spacing: -.095em; line-height: .9; }
+    .hero h1 em { color: #92938f; font-style: normal; }
+    .hero__description { max-width: 430px; margin: 0; color: #676862; font-size: 16px; line-height: 1.65; }
+    .hero__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 35px; }
+    .hero__notes { display: flex; gap: 27px; margin-top: 82px; color: #6c6e69; font: 10px/1.5 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    .hero__notes span { display: inline-block; max-width: 116px; padding-top: 11px; border-top: 1px solid rgba(29,29,28,.25); }
+    .hero__product { position: relative; display: flex; justify-content: center; min-height: 645px; }
+    .product-shadow { position: absolute; bottom: 40px; width: 330px; height: 40px; border-radius: 50%; background: rgba(78,79,73,.17); filter: blur(22px); }
+    .phone { position: relative; z-index: 2; width: min(310px, 66vw); aspect-ratio: .488; padding: 9px; border: 1px solid rgba(255,255,255,.8); border-radius: 43px; background: linear-gradient(135deg, #292b2b, #898c89 45%, #1f2222 80%); box-shadow: -28px 34px 55px rgba(39,43,42,.22), 12px 8px 25px rgba(255,255,255,.54), inset 0 0 0 1px rgba(0,0,0,.33); transform: rotate(5deg) translateY(0); transition: transform .4s ease-out; }
+    .phone::before { content: ''; position: absolute; z-index: 4; top: 16px; left: 50%; width: 86px; height: 22px; border-radius: 20px; background: #191b1b; transform: translateX(-50%); }
+    .phone__screen { position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 58px 15px 13px; border-radius: 35px; background: linear-gradient(165deg, #fafbf7 0%, #f0f1eb 67%, #e9ece6); }
+    .phone__screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 80% 10%, rgba(255,255,255,.95), transparent 33%); pointer-events: none; }
+    .phone__status { position: absolute; top: 21px; left: 18px; right: 18px; display: flex; justify-content: space-between; color: #252624; font-size: 10px; font-weight: 600; }
+    .phone__welcome { position: relative; margin: 18px 5px 20px; }
+    .phone__welcome small { color: #858883; font-size: 10px; }
+    .phone__welcome h3 { margin: 4px 0 0; font-size: 21px; font-weight: 500; letter-spacing: -.07em; }
+    .day-card { position: relative; margin-bottom: 9px; padding: 12px 10px; border: 1px solid rgba(255,255,255,.9); border-radius: 13px; background: rgba(255,255,255,.67); box-shadow: 0 4px 12px rgba(72,77,70,.06); }
+    .day-card__line { display: flex; gap: 9px; align-items: center; }
+    .day-card__icon { width: 25px; height: 25px; display: grid; place-items: center; flex: 0 0 25px; border-radius: 8px; color: #768f8d; background: #e1edeb; font-size: 12px; }
+    .day-card__icon--yellow { color: #9d8650; background: #f4ebd2; }
+    .day-card__icon--plain { border: 1px solid #c4c9c1; background: transparent; }
+    .day-card strong { display: block; font-size: 11px; font-weight: 600; }
+    .day-card span { display: block; margin-top: 2px; color: #93968f; font-size: 9px; }
+    .day-card__arrow { margin-left: auto; color: #aaaDA8; font-size: 16px; }
+    .phone__input { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: 10px 10px 10px 13px; border: 1px solid rgba(255,255,255,.9); border-radius: 17px; color: #a3a69e; background: rgba(255,255,255,.6); font-size: 10px; }
+    .mic { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--ink); font-size: 10px; }
+    .phone__tabs { display: flex; justify-content: space-around; margin-top: 10px; color: #8b8e87; font-size: 8px; }
+    .phone__tabs b { color: var(--ink); font-weight: 600; }
+    .ollie { position: absolute; z-index: 3; right: 7%; bottom: 72px; width: 88px; height: 117px; transform: rotate(8deg); animation: bob 5s ease-in-out infinite; }
+    .ollie__body { position: absolute; right: 0; bottom: 0; width: 70px; height: 77px; border: 1px solid rgba(29,29,28,.33); border-radius: 48% 48% 34% 34%; background: linear-gradient(135deg, #fffefa, #c9cdca); box-shadow: 7px 9px 14px rgba(58,62,60,.18); }
+    .ollie__head { position: absolute; top: 0; left: 6px; width: 76px; height: 67px; border: 1px solid rgba(29,29,28,.32); border-radius: 48% 52% 44% 48%; background: #f5f5ef; box-shadow: 5px 6px 11px rgba(58,62,60,.18); }
+    .ollie__head::before, .ollie__head::after { content: ''; position: absolute; top: 28px; width: 6px; height: 8px; border-radius: 50%; background: var(--ink); }
+    .ollie__head::before { left: 25px; } .ollie__head::after { left: 48px; }
+    .ollie__cap { position: absolute; z-index: 1; top: -10px; left: 4px; width: 79px; height: 27px; border: 1px solid #555955; border-radius: 60% 54% 30% 30%; background: #858b85; transform: rotate(-7deg); }
+    .ollie__cap::after { content: ''; position: absolute; left: -9px; bottom: -6px; width: 45px; height: 10px; border-radius: 50%; background: #6d746e; transform: rotate(-5deg); }
+    .ollie__hand { position: absolute; z-index: 5; right: 49px; bottom: 25px; width: 31px; height: 25px; border-radius: 50%; background: #f5f5ef; transform: rotate(21deg); }
+    .scribble { position: absolute; color: #62645f; font-family: cursive; font-size: 20px; font-style: italic; line-height: 1.1; }
+    .scribble::after { content: '↘'; position: absolute; right: -35px; bottom: -23px; font-family: var(--sans); font-size: 28px; }
+    .scribble--one { top: 54px; right: 0; transform: rotate(-7deg); }
+    .scribble--two { right: -16px; bottom: 128px; transform: rotate(8deg); }
+    .scroll-cue { position: absolute; bottom: 27px; left: 50%; color: #777a73; transform: translateX(-50%); font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+    .scroll-cue::after { content: '↓'; display: block; margin-top: 9px; text-align: center; font-size: 16px; }
+
+    section { position: relative; }
+    .section-pad { padding: 150px 0; }
+    .section-heading { max-width: 760px; margin: 0 auto; text-align: center; }
+    .section-heading h2 { margin: 20px 0; font-size: clamp(3.2rem, 6vw, 6rem); font-weight: 500; letter-spacing: -.095em; line-height: .96; }
+    .section-heading p { max-width: 470px; margin: 0 auto; color: #73756f; font-size: 16px; line-height: 1.65; }
+    .problem { padding: 175px 0 130px; background: #e7e6e1; }
+    .problem__words { display: flex; justify-content: center; gap: clamp(20px, 7vw, 100px); margin-top: 88px; color: #92948e; font: 10px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    .problem__words span:nth-child(2) { transform: translateY(32px); } .problem__words span:nth-child(3) { transform: translateY(-15px); }
+    .dump { padding: 158px 0 170px; background: linear-gradient(#e7e6e1, #efeee9); }
+    .dump__surface { position: relative; display: grid; grid-template-columns: .9fr 1.1fr; gap: 50px; align-items: center; max-width: 970px; margin: 78px auto 0; padding: 44px; border: 1px solid rgba(255,255,255,.84); border-radius: var(--radius-xl); background: rgba(255,255,255,.35); box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .dump__surface::before { content: ''; position: absolute; inset: 9px; border: 1px solid rgba(255,255,255,.34); border-radius: 34px; pointer-events: none; }
+    .dump__input { min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; padding: 27px; border-radius: 25px; background: rgba(244,245,239,.7); }
+    .dump__input blockquote { margin: 25px 0; font-size: clamp(1.35rem, 2.4vw, 2rem); letter-spacing: -.05em; line-height: 1.16; }
+    .dump__input small { color: #888b84; font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+    .voice-line { display: flex; align-items: center; gap: 4px; color: #7a8884; }
+    .voice-line i { display: block; width: 2px; height: 12px; border-radius: 4px; background: currentColor; animation: wave 1.2s ease-in-out infinite alternate; }
+    .voice-line i:nth-child(2n) { height: 22px; animation-delay: -.6s; } .voice-line i:nth-child(3n) { height: 8px; animation-delay: -.2s; }
+    .dump__result { display: grid; gap: 10px; }
+    .result-row { display: grid; grid-template-columns: 74px 1fr auto; gap: 17px; align-items: center; padding: 16px 17px; border-bottom: 1px solid rgba(29,29,28,.1); }
+    .result-row:last-child { border: 0; }
+    .result-row__type { color: #8d938b; font: 9px var(--mono); letter-spacing: .12em; }
+    .result-row strong { font-size: 15px; font-weight: 500; letter-spacing: -.03em; }
+    .result-row span:last-child { color: #8b8e87; font-size: 11px; }
+    .result-row__dot { width: 9px; height: 9px; margin-right: 5px; display: inline-block; border-radius: 50%; background: #98aca6; }
+
+    .trinity { padding: 160px 0; background: #f0efea; }
+    .trinity__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 80px; }
+    .trinity-card { min-height: 390px; display: flex; flex-direction: column; justify-content: space-between; padding: 30px; border-top: 1px solid var(--line); }
+    .trinity-card:nth-child(2) { border-radius: 190px 190px 0 0; background: rgba(255,255,255,.33); border: 1px solid rgba(255,255,255,.72); }
+    .trinity-card:nth-child(3) { border-radius: 0 0 190px 190px; background: rgba(255,255,255,.33); border: 1px solid rgba(255,255,255,.72); }
+    .trinity-card__number { color: #9b9c96; font: 11px var(--mono); }
+    .trinity-card h3 { margin: 0; font-size: clamp(2.1rem, 4vw, 4rem); font-weight: 500; letter-spacing: -.09em; }
+    .trinity-card p { max-width: 235px; margin: 0; color: #757770; font-size: 14px; line-height: 1.55; }
+    .trinity-card__examples { align-self: flex-end; margin-top: 30px; color: #888b84; font-size: 13px; line-height: 1.8; }
+
+    .adapt { padding: 160px 0; background: #e5e5e0; }
+    .adapt__layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 105px; align-items: center; max-width: 1000px; margin: 80px auto 0; }
+    .adapt__copy h2 { margin: 18px 0; font-size: clamp(3rem, 5vw, 5.5rem); font-weight: 500; letter-spacing: -.095em; line-height: .91; }
+    .adapt__copy p { max-width: 300px; margin: 0; color: #777971; font-size: 15px; line-height: 1.6; }
+    .schedule { padding: 27px 31px; border: 1px solid rgba(255,255,255,.83); border-radius: var(--radius-lg); background: rgba(255,255,255,.43); box-shadow: var(--shadow); }
+    .schedule__top { display: flex; justify-content: space-between; padding-bottom: 19px; color: #8a8c85; font: 10px var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+    .schedule__row { position: relative; display: grid; grid-template-columns: 50px 1fr auto; gap: 18px; align-items: center; min-height: 68px; border-top: 1px solid rgba(29,29,28,.11); }
+    .schedule__row time { color: #82847e; font: 11px var(--mono); }
+    .schedule__row strong { font-size: 15px; font-weight: 500; letter-spacing: -.03em; }
+    .schedule__row small { color: #8c8f88; font-size: 11px; }
+    .schedule__row--shift { color: #7b8c87; }
+    .schedule__row--shift::after { content: 'adjusted'; position: absolute; right: 0; top: 4px; color: #8d9d95; font: 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .schedule__note { margin: 24px 0 0; color: #7b827b; font-size: 12px; }
+
+    .reminders { padding: 170px 0; background: #e9e8e3; overflow: hidden; }
+    .reminders__stage { position: relative; height: 480px; max-width: 900px; margin: 55px auto 0; }
+    .reminder-note { position: absolute; min-width: 190px; padding: 19px 23px; border: 1px solid rgba(255,255,255,.9); border-radius: 25px; background: rgba(255,255,255,.45); box-shadow: var(--shadow); font-size: 15px; letter-spacing: -.04em; backdrop-filter: blur(13px); }
+    .reminder-note small { display: block; margin-top: 8px; color: #9a9c96; font: 9px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    .reminder-note:nth-child(1) { top: 40px; left: 9%; transform: rotate(-9deg); } .reminder-note:nth-child(2) { top: 220px; left: 28%; transform: rotate(5deg); } .reminder-note:nth-child(3) { top: 25px; right: 10%; transform: rotate(8deg); } .reminder-note:nth-child(4) { top: 260px; right: 20%; transform: rotate(-5deg); }
+    .reminders__center { position: absolute; top: 50%; left: 50%; width: 170px; height: 170px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.82); border-radius: 50%; color: #858982; background: rgba(255,255,255,.2); transform: translate(-50%, -50%); box-shadow: inset 0 1px rgba(255,255,255,.9); font: 10px var(--mono); letter-spacing: .15em; text-align: center; text-transform: uppercase; }
+
+    .context { padding: 160px 0; background: #f1f0eb; }
+    .context__layout { display: grid; grid-template-columns: 1fr 1fr; gap: 85px; align-items: center; max-width: 980px; margin: 80px auto 0; }
+    .context__copy h2 { max-width: 480px; margin: 18px 0 25px; font-size: clamp(3rem, 5vw, 5.1rem); font-weight: 500; letter-spacing: -.095em; line-height: .93; }
+    .context__copy p { max-width: 330px; color: #777971; font-size: 15px; line-height: 1.6; }
+    .context-card { padding: 29px; border: 1px solid rgba(255,255,255,.87); border-radius: var(--radius-xl); background: rgba(255,255,255,.42); box-shadow: var(--shadow); }
+    .context-card__user { margin: 0 0 25px; color: #4c4e49; font-size: 17px; letter-spacing: -.04em; }
+    .context-card__user::before { content: 'You'; display: block; margin-bottom: 8px; color: #9a9c96; font: 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+    .context-card__proposal { padding: 23px; border-radius: 20px; background: rgba(244,245,239,.83); }
+    .context-card__proposal small { color: #92958e; font: 10px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    .context-card__proposal h4 { margin: 14px 0 7px; font-size: 18px; font-weight: 500; letter-spacing: -.04em; }
+    .context-card__proposal p { margin: 0; color: #777a72; font-size: 13px; line-height: 1.5; }
+    .context-card__actions { display: flex; gap: 9px; margin-top: 24px; }
+    .context-card__actions button { min-height: 38px; padding: 0 16px; border: 1px solid rgba(29,29,28,.15); border-radius: 999px; color: #72746e; background: transparent; font-size: 12px; }
+    .context-card__actions button:last-child { color: #f8f8f4; background: var(--ink); border-color: var(--ink); }
+
+    .voice { padding: 155px 0; background: #e5e5e0; }
+    .voice__surface { position: relative; max-width: 850px; margin: 75px auto 0; padding: 63px; border: 1px solid rgba(255,255,255,.85); border-radius: 180px; text-align: center; background: rgba(255,255,255,.28); box-shadow: var(--shadow); }
+    .voice__button { width: 105px; height: 105px; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; color: #f8f8f4; background: var(--ink); box-shadow: 0 0 0 14px rgba(255,255,255,.21), 0 0 0 15px rgba(255,255,255,.35); font-size: 24px; transition: transform .3s; }
+    .voice__button:hover { transform: scale(1.05); }
+    .voice__quote { margin: 45px auto 11px; font-size: clamp(1.5rem, 3vw, 2.5rem); letter-spacing: -.06em; }
+    .voice__result { color: #8d9188; font: 11px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+
+    .privacy { padding: 150px 0; background: #efeee9; }
+    .privacy__layout { display: grid; grid-template-columns: 1fr 1.15fr; gap: 115px; align-items: center; max-width: 960px; margin: 85px auto 0; }
+    .privacy h2 { max-width: 400px; margin: 18px 0; font-size: clamp(3.1rem, 5vw, 5.4rem); font-weight: 500; letter-spacing: -.1em; line-height: .9; }
+    .privacy p { max-width: 310px; margin: 0; color: #777971; font-size: 14px; line-height: 1.6; }
+    .principles { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; padding: 10px 0; }
+    .principle { min-height: 118px; padding: 26px 0; border-top: 1px solid rgba(29,29,28,.13); }
+    .principle strong { font-size: 15px; font-weight: 500; letter-spacing: -.03em; } .principle p { margin-top: 8px; font-size: 12px; }
+
+    .cta { padding: 125px 0 145px; background: #e5e4df; }
+    .cta__surface { position: relative; overflow: hidden; padding: 105px 40px 110px; border: 1px solid rgba(255,255,255,.9); border-radius: 54px; text-align: center; background: radial-gradient(circle at 50% 15%, rgba(255,255,255,.68), rgba(255,255,255,.28) 60%); box-shadow: var(--shadow); }
+    .cta__surface::before, .cta__surface::after { content: ''; position: absolute; border: 1px solid rgba(255,255,255,.62); border-radius: 50%; pointer-events: none; }
+    .cta__surface::before { width: 420px; height: 420px; top: -260px; left: -90px; } .cta__surface::after { width: 350px; height: 350px; right: -130px; bottom: -220px; }
+    .cta h2 { position: relative; margin: 18px 0; font-size: clamp(3.5rem, 7vw, 7rem); font-weight: 500; letter-spacing: -.1em; line-height: .89; }
+    .cta p { position: relative; margin: 0 auto 32px; color: #777971; font-size: 16px; line-height: 1.5; }
+    .cta .button { position: relative; }
+
+    footer { padding: 35px 0 40px; background: #e5e4df; }
+    .footer__inner { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 31px; border-top: 1px solid rgba(29,29,28,.15); }
+    .footer__tagline { margin: 16px 0 0; color: #83857f; font: 10px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    .footer-links { display: flex; gap: 25px; color: #7b7d77; font-size: 12px; }
+    .footer__bottom { display: flex; justify-content: space-between; margin-top: 70px; color: #999b94; font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+
+    .reveal { opacity: 0; transform: translateY(26px); transition: opacity .85s ease, transform .85s ease; }
+    .reveal.is-visible { opacity: 1; transform: none; }
+    @keyframes drift { 0%,100% { transform: translate3d(0,0,0) rotate(0); } 50% { transform: translate3d(20px, 18px,0) rotate(7deg); } }
+    @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+    @keyframes load { 0% { transform: translateX(-130%); } 50%,100% { transform: translateX(330%); } }
+    @keyframes bob { 0%,100% { transform: rotate(8deg) translateY(0); } 50% { transform: rotate(5deg) translateY(-10px); } }
+    @keyframes wave { from { transform: scaleY(.65); } to { transform: scaleY(1.3); } }
+
+    @media (max-width: 900px) {
+      .hero { min-height: auto; padding: 160px 0 100px; }
+      .hero__grid { grid-template-columns: 1fr; gap: 55px; }
+      .hero__copy { padding: 0; text-align: center; } .hero h1, .hero__description { margin-left: auto; margin-right: auto; } .hero__actions, .hero__notes { justify-content: center; }
+      .hero__product { min-height: 610px; } .hero__product .phone { transform: rotate(5deg) scale(.9); }
+      .dump__surface { grid-template-columns: 1fr; } .dump__input { min-height: 260px; }
+      .adapt__layout, .context__layout, .privacy__layout { gap: 55px; }
+      .privacy__layout { grid-template-columns: .8fr 1.2fr; }
+    }
+    @media (max-width: 640px) {
+      .container { width: min(100% - 36px, 1180px); }
+      .glass-nav { top: 12px; width: calc(100% - 24px); min-height: 58px; padding-left: 17px; } .nav-links { display: none; } .glass-nav .button { min-height: 40px; padding: 0 14px; margin-left: auto; font-size: 11px; }
+      .hero { padding-top: 120px; } .hero h1 { font-size: clamp(3.7rem, 17vw, 5.3rem); } .hero__description { font-size: 14px; } .hero__notes { gap: 12px; margin-top: 55px; } .hero__notes span { max-width: 95px; font-size: 8px; }
+      .hero__product { min-height: 540px; } .hero__product .phone { width: 270px; } .ollie { right: 1%; bottom: 50px; transform: scale(.78) rotate(8deg); } .scribble--one { display: none; }
+      .section-pad, .problem, .dump, .trinity, .adapt, .reminders, .context, .voice, .privacy { padding: 105px 0; } .section-heading h2 { font-size: clamp(3rem, 14vw, 4.6rem); }
+      .problem__words { gap: 20px; margin-top: 55px; font-size: 8px; } .problem__words span:nth-child(2) { transform: translateY(18px); }
+      .dump__surface { margin-top: 50px; padding: 17px; border-radius: 28px; } .dump__input { min-height: 270px; padding: 22px; } .result-row { grid-template-columns: 58px 1fr; gap: 8px; padding: 14px 4px; } .result-row span:last-child { grid-column: 2; }
+      .trinity__grid { grid-template-columns: 1fr; margin-top: 48px; gap: 12px; } .trinity-card, .trinity-card:nth-child(2), .trinity-card:nth-child(3) { min-height: 285px; border-radius: 25px; border: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.26); } .trinity-card h3 { font-size: 3.2rem; }
+      .adapt__layout, .context__layout, .privacy__layout { grid-template-columns: 1fr; margin-top: 50px; } .adapt__copy h2, .context__copy h2, .privacy h2 { font-size: 3.7rem; } .schedule { padding: 17px; } .schedule__row { grid-template-columns: 42px 1fr; gap: 10px; } .schedule__row small { grid-column: 2; } .schedule__row--shift::after { top: 5px; }
+      .reminders__stage { height: 400px; } .reminder-note { min-width: 155px; padding: 15px; font-size: 13px; } .reminder-note:nth-child(1) { left: 0; } .reminder-note:nth-child(2) { left: 12%; top: 220px; } .reminder-note:nth-child(3) { right: 0; } .reminder-note:nth-child(4) { right: 4%; top: 285px; } .reminders__center { width: 125px; height: 125px; font-size: 8px; }
+      .voice__surface { margin-top: 50px; padding: 55px 20px; border-radius: 80px; } .voice__quote { font-size: 1.6rem; }
+      .principles { gap: 0 17px; } .principle { min-height: 135px; } .principle p { font-size: 11px; }
+      .cta { padding: 85px 0 100px; } .cta__surface { padding: 78px 23px 85px; border-radius: 32px; } .cta h2 { font-size: clamp(3.4rem, 16vw, 5rem); }
+      .footer__inner, .footer__bottom { flex-direction: column; align-items: flex-start; gap: 25px; } .footer-links { flex-wrap: wrap; gap: 14px 20px; } .footer__bottom { margin-top: 45px; gap: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
 </head>
-<body>
+<body class="is-loading">
+  <div class="loader" role="status" aria-label="Loading Ollie">
+    <div class="loader__blob loader__blob--one"></div><div class="loader__blob loader__blob--two"></div><div class="loader__blob loader__blob--three"></div>
+    <div class="loader__orb">
+      <div><p class="loader__name">Ollie</p><p class="loader__tagline">Make room<br>for what matters.</p><div class="loader__progress"></div><p class="loader__small">Getting things ready...</p></div>
+    </div>
+  </div>
+
+  <main class="page">
+    <div class="soft-orb soft-orb--a"></div><div class="soft-orb soft-orb--b"></div><div class="soft-orb soft-orb--c"></div><div class="soft-orb soft-orb--d"></div>
+    <nav class="glass-nav" aria-label="Main navigation">
+      <a class="brand" href="#top" aria-label="Ollie home"><span class="brand__mark"></span>Ollie</a>
+      <div class="nav-links"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#privacy">Privacy</a></div>
+      <a class="button" href="#join">Join early access <span class="arrow">→</span></a>
+    </nav>
+
+    <section class="hero" id="top">
+      <div class="hero__wash"></div>
+      <div class="container hero__grid">
+        <div class="hero__copy reveal">
+          <p class="eyebrow">Make room for what matters.</p>
+          <h1>Your life,<br><em>actually</em> organized.</h1>
+          <p class="hero__description">Dump everything on your mind. Ollie turns it into a plan — tasks, events, and reminders, automatically.</p>
+          <div class="hero__actions"><a class="button" href="#join">Join early access <span class="arrow">→</span></a><a class="button button--light" href="#how-it-works">See how it works <span class="arrow">↘</span></a></div>
+          <div class="hero__notes"><span>Brain dump<br>anything</span><span>Adapts when<br>plans change</span><span>Built for<br>real life</span></div>
+        </div>
+        <div class="hero__product reveal" data-parallax>
+          <div class="product-shadow"></div>
+          <div class="phone" role="img" aria-label="Ollie Today app preview">
+            <div class="phone__screen"><div class="phone__status"><span>9:41</span><span>••• ◼</span></div><div class="phone__welcome"><small>Tuesday, October 8</small><h3>Good morning<br>Here's your day.</h3></div>
+              <div class="day-card"><div class="day-card__line"><div class="day-card__icon">✦</div><div><strong>School</strong><span>8:00 AM — 3:00 PM</span></div><span class="day-card__arrow">›</span></div></div>
+              <div class="day-card"><div class="day-card__line"><div class="day-card__icon day-card__icon--plain"></div><div><strong>Finish physics worksheet</strong><span>After school</span></div></div></div>
+              <div class="day-card"><div class="day-card__line"><div class="day-card__icon">♧</div><div><strong>Basketball</strong><span>5:00 PM</span></div><span class="day-card__arrow">›</span></div></div>
+              <div class="day-card"><div class="day-card__line"><div class="day-card__icon day-card__icon--plain"></div><div><strong>Bring your calculator</strong><span>Tomorrow</span></div></div></div>
+              <div class="day-card"><div class="day-card__line"><div class="day-card__icon day-card__icon--yellow">◌</div><div><strong>Call Alex</strong><span>Tonight</span></div></div></div>
+              <div class="phone__input"><span>Dump something...</span><b class="mic">•</b></div><div class="phone__tabs"><b>Today</b><span>Schedule</span><span>Reminders</span></div>
+            </div>
+          </div>
+          <div class="ollie" aria-hidden="true"><div class="ollie__cap"></div><div class="ollie__head"></div><div class="ollie__body"></div><div class="ollie__hand"></div></div>
+          <div class="scribble scribble--one">Just<br>dump it.</div><div class="scribble scribble--two">Ollie<br>makes sense<br>of it.</div>
+        </div>
+      </div>
+      <a class="scroll-cue" href="#problem">Scroll to explore</a>
+    </section>
+
+    <section class="problem" id="problem"><div class="container section-heading reveal"><p class="eyebrow">The problem</p><h2>Your brain wasn't built to be a task manager.</h2><p>Thoughts don't arrive neatly organized. You shouldn't have to manually turn every thought, change of plans, and tiny reminder into a productivity system.</p></div><div class="problem__words reveal"><span>Plans</span><span>Ideas</span><span>People</span><span>You</span></div></section>
+
+    <section class="dump" id="how-it-works"><div class="container section-heading reveal"><p class="eyebrow">One simple input</p><h2>Just dump it.</h2><p>Say it messy. Ollie understands what needs a time, what needs doing, and what you simply need to remember.</p></div><div class="dump__surface reveal"><div class="dump__input"><small>Your brain dump</small><blockquote>“Tomorrow I have school until 3, basketball at 5, I need to finish my physics worksheet, remind me to bring my calculator, and I need to call Alex tonight.”</blockquote><div class="voice-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="dump__result"><div class="result-row"><span class="result-row__type"><i class="result-row__dot"></i>Event</span><strong>School</strong><span>8:00 AM — 3:00 PM</span></div><div class="result-row"><span class="result-row__type">Task</span><strong>Physics worksheet</strong><span>After school</span></div><div class="result-row"><span class="result-row__type"><i class="result-row__dot"></i>Event</span><strong>Basketball</strong><span>5:00 PM</span></div><div class="result-row"><span class="result-row__type">Reminder</span><strong>Bring calculator</strong><span>Before school</span></div><div class="result-row"><span class="result-row__type">Reminder</span><strong>Call Alex</strong><span>Tonight</span></div></div></div></section>
+
+    <section class="trinity" id="features"><div class="container section-heading reveal"><p class="eyebrow">It knows the difference</p><h2>Not everything belongs on a calendar.</h2></div><div class="container trinity__grid"><article class="trinity-card reveal"><span class="trinity-card__number">01 / Tasks</span><h3>Things to do.</h3><p>Meaningful work that needs a little time and attention.</p><div class="trinity-card__examples">Finish homework.<br>Study for history.<br>Work on a project.</div></article><article class="trinity-card reveal"><span class="trinity-card__number">02 / Events</span><h3>Places to be.</h3><p>Things that already happen at a specific time.</p><div class="trinity-card__examples">School.<br>Basketball.<br>Classes.</div></article><article class="trinity-card reveal"><span class="trinity-card__number">03 / Reminders</span><h3>Things to remember.</h3><p>Small details that shouldn't take over your day.</p><div class="trinity-card__examples">Bring your calculator.<br>Call someone.<br>Take your book.</div></article></div></section>
+
+    <section class="adapt"><div class="container adapt__layout"><div class="adapt__copy reveal"><p class="eyebrow">Life is not static</p><h2>Plans change.<br>Ollie changes with them.</h2><p>When physics takes longer, your schedule doesn't quietly become impossible. Ollie makes the adjustment and keeps you moving.</p></div><div class="schedule reveal"><div class="schedule__top"><span>Tuesday / October 8</span><span>Adjusted</span></div><div class="schedule__row"><time>4:00</time><strong>Physics</strong><small>in progress</small></div><div class="schedule__row schedule__row--shift"><time>5:30</time><strong>Project</strong><small>moved from 5:00</small></div><div class="schedule__row schedule__row--shift"><time>6:30</time><strong>Basketball</strong><small>moved from 6:00</small></div><p class="schedule__note">Your schedule changed. Ollie adjusted it.</p></div></div></section>
+
+    <section class="reminders"><div class="container section-heading reveal"><p class="eyebrow">A quieter way to remember</p><h2>Don't forget.</h2></div><div class="reminders__stage reveal"><div class="reminder-note">Bring calculator<small>Tomorrow</small></div><div class="reminder-note">Call Alex<small>Tonight</small></div><div class="reminder-note">Take physics book<small>Before school</small></div><div class="reminder-note">Email Sarah<small>Friday</small></div><div class="reminders__center">Small things<br>kept safe</div></div></section>
+
+    <section class="context"><div class="container context__layout"><div class="context__copy reveal"><p class="eyebrow">Personal context</p><h2>Ollie gets to know your routine. You stay in control.</h2><p>Ollie can use your routines, preferences, schedules, and context to plan better. Nothing changes without you.</p></div><div class="context-card reveal"><p class="context-card__user">I don't have basketball on Thursdays anymore.</p><div class="context-card__proposal"><small>Proposed change</small><h4>Remove recurring Thursday basketball</h4><p>Ollie found 4 upcoming events that match.</p><div class="context-card__actions"><button type="button">Cancel</button><button type="button">Confirm</button></div></div></div></div></section>
+
+    <section class="voice"><div class="container section-heading reveal"><p class="eyebrow">When your hands are full</p><h2>Don't type it.<br>Say it.</h2></div><div class="voice__surface reveal"><button type="button" class="voice__button" aria-label="Start voice capture">⌁</button><p class="voice__quote">“Remind me to bring my calculator tomorrow.”</p><span class="voice__result">→ &nbsp; Bring calculator / Tomorrow</span></div></section>
+
+    <section class="privacy" id="privacy"><div class="container privacy__layout"><div class="reveal"><p class="eyebrow">A quiet promise</p><h2>Your life is yours.</h2><p>Personal planning information should remain under your control. Ollie is designed to be useful without asking you to give up ownership of your context.</p></div><div class="principles reveal"><div class="principle"><strong>Private by design</strong><p>Your context is treated like context, not content.</p></div><div class="principle"><strong>You control your context</strong><p>See, shape, and remove what Ollie remembers.</p></div><div class="principle"><strong>Export your data</strong><p>Your plans should never feel locked away.</p></div><div class="principle"><strong>No selling your personal life</strong><p>There is no business in knowing more about you.</p></div></div></div></section>
+
+    <section class="cta" id="join"><div class="container"><div class="cta__surface reveal"><p class="eyebrow">Make room for what matters.</p><h2>A little less noise.<br>A lot more life.</h2><p>Your thoughts are messy.<br>Your day doesn't have to be.</p><a class="button" href="mailto:hello@ollie.app?subject=Ollie%20early%20access">Join early access <span class="arrow">→</span></a></div></div></section>
+  </main>
+  <footer><div class="container"><div class="footer__inner"><div><a class="brand" href="#top"><span class="brand__mark"></span>Ollie</a><p class="footer__tagline">Make room for what matters.</p></div><div class="footer-links"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#privacy">Privacy</a><a href="#">Terms</a><a href="mailto:hello@ollie.app">Contact</a></div></div><div class="footer__bottom"><span>© 2026 Ollie</span><span>Built for the life you're already living.</span></div></div></footer>
+  <script>
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const loader = document.querySelector('.loader');
+    const finishLoading = () => { document.body.classList.remove('is-loading'); loader.classList.add('is-done'); };
+    if (reduceMotion) finishLoading();
+    else window.addEventListener('load', () => setTimeout(finishLoading, 1050), { once: true });
+    setTimeout(finishLoading, 2200);
+
+    const nav = document.querySelector('.glass-nav');
+    const revealItems = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), { threshold: .14 });
+    revealItems.forEach((item) => observer.observe(item));
+    const phone = document.querySelector('.phone');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 24);
+      if (!reduceMotion && phone && window.scrollY < window.innerHeight * 1.3) phone.style.transform = `rotate(5deg) translateY(${window.scrollY * .035}px)`;
+    }, { passive: true });
+    if (!reduceMotion) {
+      document.querySelector('.hero__product').addEventListener('pointermove', (event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - .5;
+        const y = (event.clientY - rect.top) / rect.height - .5;
+        phone.style.transform = `rotate(${5 + x * 3}deg) translate(${x * 6}px, ${y * 6}px)`;
+      });
+      document.querySelector('.hero__product').addEventListener('pointerleave', () => { phone.style.transform = 'rotate(5deg) translateY(0)'; });
+    }
+  </script>
 </body>
 </html>
